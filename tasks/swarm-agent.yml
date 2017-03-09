@@ -1,0 +1,28 @@
+- name: check docker swarm agent
+  command: "docker ps -f name=swarm-agent -q"
+  register: p
+
+- name: stop docker swarm agent {{ p.stdout }}
+  command: "docker stop {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: delete docker swarm agent
+  command: "docker rm -f {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: start swarm agent
+  command: "docker run -d --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=swarm_{{ hostname }} --name=swarm-agent swarm join --advertise={{ node_ip }}:2375 consul://{{ consul_url }}"
+
+# - name: create swarm master
+#   docker_container:
+#     name: swarm-master
+#     image: swarm
+#     network_mode: host
+#     command: manage -H :4000 consul://{{ consul_url }}
+#     state: started
+#     hostname: "swarm-{{ hostname }}"
+#     restart_policy: always
+#     log_options:
+#       syslog-address: "udp://{{ rsyslog_addr }}"
+#       tag: "swarm_{{ hostname }}"
+#     log_driver: syslog

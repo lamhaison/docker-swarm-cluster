@@ -1,0 +1,52 @@
+- name: check docker consul
+  command: "docker ps -f name=consul -q"
+  register: p
+
+- name: stop docker consul {{ p.stdout }}
+  command: "docker stop {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: delete docker consul
+  command: "docker rm -f {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: Check that the {{ consul_data }} exists
+  stat:
+    path: "{{ consul_data }}"
+  register: p
+  when: delete_consul_data
+
+- name: rm consul data
+  file:
+    path: "{{ consul_data }}"
+    state: absent
+  when: p.stat.isdir is defined and p.stat.isdir and delete_consul_data
+
+
+# - name: get_ip_addr
+#   command: "IFACE='eth0' && (ip -4 address show $IFACE | grep 'inet' | sed 's/.*inet \([0-9\.]\+\).*/\1/')"
+#   register: consul_ip
+
+# - name: run consul
+  # command: ""
+- debug:
+    msg: agent -server -bind=0.0.0.0 -ui -client=0.0.0.0 -retry-join={{ retry_join }} -join={{ join }} -advertise {{ consul_ip }} -bootstrap-expect={{ number_cluster }}
+
+- name: create consul in server mode
+  docker:
+    name: consul
+    image: consul
+    # command: agent -server -bind=0.0.0.0 -ui -client=0.0.0.0 -retry-join={{ retry_join }} -join={{ join }} -advertise {{ consul_ip }} -bootstrap-expect={{ number_cluster }}
+    command: agent -server -bind=0.0.0.0 -ui -client=0.0.0.0 -retry-join={{ retry_join }} -join={{ join }} -advertise {{ consul_ip }} -bootstrap-expect={{ number_cluster }}
+    state: started
+    restart_policy: always
+    net: host
+    log_driver: syslog
+    log_opt:
+      syslog-address: "udp://{{ rsyslog_addr }}"
+      tag: "{{ hostname }}"
+    volumes:
+      - "{{ consul_data }}:/consul"
+    env:
+      CONSUL_LOCAL_CONFIG: "{\"skip_leave_on_interrupt\": true}"
+  when: init_consul

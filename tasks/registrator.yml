@@ -1,0 +1,28 @@
+- name: check docker registrator
+  command: "docker ps -f name=registrator -q"
+  register: p
+
+- name: stop docker registrator {{ p.stdout }}
+  command: "docker stop {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: delete docker swarm registrator
+  command: "docker rm -f {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: start registrator
+  command: "docker run -d --add-host consul.fimplus-prod.io:10.10.5.151 --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=registrator_{{ hostname }} --name=registrator -h {{ node_ip }} --volume=/var/run/docker.sock:/tmp/docker.sock gliderlabs/registrator -ip {{ node_ip }} -retry-attempts -1 -retry-interval 5000 -resync 120 consul://{{ consul_url }}"
+
+# - name: create swarm master
+#   docker_container:
+#     name: swarm-master
+#     image: swarm
+#     network_mode: host
+#     command: manage -H :4000 consul://{{ consul_url }}
+#     state: started
+#     hostname: "swarm-{{ hostname }}"
+#     restart_policy: always
+#     log_options:
+#       syslog-address: "udp://{{ rsyslog_addr }}"
+#       tag: "swarm_{{ hostname }}"
+#     log_driver: syslog

@@ -1,0 +1,10 @@
+- name: Create haproxy configuration for consul, swarm master service
+  become: yes
+  template:
+    src: consul-swarm-ha.conf.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - Reload haproxy

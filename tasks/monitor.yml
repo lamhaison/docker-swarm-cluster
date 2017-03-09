@@ -1,0 +1,17 @@
+- name: check docker monitor agent
+  command: "docker ps -f name=docker-agent -q"
+  register: p
+
+- name: stop docker monitor agent {{ p.stdout }}
+  command: "docker stop {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: delete docker monitor agent
+  command: "docker rm -f {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: start docker monitor agent
+  command: "docker run -d -v /var/run/docker.sock:/var/run/docker.sock -e GRAPHITE_SERVER={{ graphite_addr }} -e GRAPHITE_PORT={{ graphite_port }} -e PREFIX={{ prefix }}.{{ hostname }} --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=swarm_monitor_{{ hostname }} --name=docker-agent-{{ hostname }} {{ monitor_image }}"
+
+- debug:
+    msg: "docker run -d -v /var/run/docker.sock:/var/run/docker.sock -e GRAPHITE_SERVER={{ graphite_addr }} -e GRAPHITE_PORT={{ graphite_port }} -e PREFIX={{ prefix }}.{{ hostname }} --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=swarm_monitor_{{ hostname }} --name=docker-agent-{{ hostname }} {{ monitor_image }}"

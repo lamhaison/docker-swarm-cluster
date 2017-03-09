@@ -1,0 +1,14 @@
+- name: update apt cache
+  apt: update_cache=yes
+  when: install_haproxy
+
+
+- name: add-apt-repository ppa:vbernat/haproxy-{{ haproxy_version }}
+  command: add-apt-repository -y ppa:vbernat/haproxy-{{ haproxy_version }}
+
+- name: install haproxy
+  apt: name=haproxy state=latest
+
+- name: Ensure HAProxy is started and enabled on boot.
+  service: name=haproxy state=started enabled=yes
+

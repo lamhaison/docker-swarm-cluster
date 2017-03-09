@@ -1,0 +1,16 @@
+- name: check docker swarm master
+  command: "docker ps -f name=swarm-master -qa"
+  register: p
+
+- name: stop docker swarm master {{ p.stdout }}
+  command: "docker stop {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: delete docker swarm master
+  command: "docker rm -f {{ p.stdout }}"
+  when: p.stdout != ""
+
+- name: start swarm master
+  #command: "docker run -d --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=swarm-master_{{ hostname }} --name=swarm-master -p 4000:4000 swarm manage -H :4000 consul://{{ consul_url }}"
+  command: "docker run -d --restart=always --log-driver=syslog --log-opt syslog-address=udp://{{ rsyslog_addr }} --log-opt tag=swarm-master_{{ hostname }} --name=swarm-master -p 4000:4000 swarm manage -H :4000 --replication --advertise {{ consul_ip }}:4000 consul://{{ consul_url }}"
+

@@ -1,0 +1,64 @@
+global
+    log 127.0.0.1    local0
+    log 127.0.0.1    local1 notice
+    log {{rsyslog_addr}}    local0
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    tune.ssl.default-dh-param 2048
+    daemon
+
+defaults
+    log     global
+    mode    tcp
+    option      tcplog
+    option  dontlognull
+    option  abortonclose    # abort request if client closes output channel while waiting client IPs
+    timeout connect 5000
+    timeout client  15000
+    timeout server  30000
+    errorfile 400 /etc/haproxy/errors/400.http
+    errorfile 403 /etc/haproxy/errors/403.http
+    errorfile 408 /etc/haproxy/errors/408.http
+    errorfile 500 /etc/haproxy/errors/500.http
+    errorfile 502 /etc/haproxy/errors/502.http
+    errorfile 503 /etc/haproxy/errors/503.http
+    errorfile 504 /etc/haproxy/errors/504.http
+
+
+listen consul
+    mode tcp
+    bind *:8989
+    stats enable
+    stats uri /haproxy?stats
+    stats realm Strictly\ Private
+    stats auth ubuntu
+    balance roundrobin
+    option httpclose
+    option forwardfor
+    server consul_{{consul_active}} {{consul_active}}:8500 check fastinter 1000 fall 1 rise 1 maxconn 512
+    {% for consul in consul_backup_list %}
+    server consul_{{consul}} {{consul}}:8500 check fastinter 1000 fall 1 rise 1 maxconn 512 backup
+    {% endfor %}
+
+frontend incoming_stats
+    bind    *:80
+    mode    http
+    stats enable
+    stats uri /stats        # Real path redacted
+    stats realm Haproxy\ Statistics
+    stats auth  admin:admin
+
+listen swarm
+    mode http
+    bind *:8990
+    balance roundrobin
+    option httpclose
+    option forwardfor
+    server swarm_{{swarm_active}} {{swarm_active}}:4000 check fastinter 1000 fall 1 rise 1 maxconn 512
+    {% for swarm in swarm_backup_list %}
+    server swarm_{{swarm}} {{swarm}}:4000 check fastinter 1000 fall 1 rise 1 maxconn 512 backup
+    {% endfor %}
+
