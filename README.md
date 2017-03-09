@@ -147,3 +147,40 @@ License
 
 Apache v2.0
 # docker-swarm-cluster
+
+
+
+
+# Install docker
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-worker-1
+
+# Create consul cluster
+```
+ubuntu@controller-01:~/linuxscript/roles/ansible-fimplus/tests$ ansible-playbook -s -i /etc/ansible/production consul-ansible.yml --tags "consul" --limit "prod-consul" --extra-vars "init_consul=true"
+
+
+# Create swarm master
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-consul --tags "swarm" --extra-vars "create_swarm_master=true"
+
+
+# Create swarm agent
+
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-node --tags "swarm" --extra-vars "create_swarm_agent=true"
+
+
+# Create registrator agent
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-node --tags "swarm" --extra-vars "create_registrator=true, consul_url=consul.fimplus-prod.io:8989"
+```
+
+# Configurate haproxy
+```
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-consul --tags "haproxy" --extra-vars "render_consul_ha=true"
+```
+
+
+
+# Install docker monitor agent
+```
+ansible-playbook -s -i /etc/ansible/production node-ansible.yml --limit=prod-consul --tags "monitor" --extra-vars "create_monitor_agent=true"
+```
+
